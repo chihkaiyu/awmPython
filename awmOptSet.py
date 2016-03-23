@@ -21,11 +21,11 @@ class AwmOpt:
 
     def displayOpt(self):
         print('==============================')
-	    print('Frame size: {0}'.format(self.frameSize))
-	    print('Overlap: {0}'.format(self.overlap))
-	    print('Sync. target band: {0}'.format(self.syncFreqBand))
-	    print('Data target band: {0}'.format(self.dataFreqBand))
-	    print('Spreading length: {0}'.format(self.spreadLen))
-	    print('Data: {0}'.format(self.data))
-	    print('Method: {0}'.format(self.method))
+        print('Frame size: {0}'.format(self.frameSize))
+        print('Overlap: {0}'.format(self.overlap))
+        print('Sync. target band: {0}'.format(self.syncFreqBand))
+        print('Data target band: {0}'.format(self.dataFreqBand))
+        print('Spreading length: {0}'.format(self.spreadLen))
+        print('Data: {0}'.format(self.data))
+        print('Method: {0}'.format(self.method))
         print('==============================')
