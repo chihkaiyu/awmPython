@@ -33,12 +33,11 @@ class AWM:
     
 def main():
     awmOpt = AwmOpt()
-    au = AWM('/home/kai/Documents/originalAudio/rock.wav', awmOpt)
-    au.awmOpt.Opt()
+    au = AWM('D:\\Google Drive\\awm_mclt_corpus\originalAudio\\classical.wav', awmOpt)
+    au.displayAwmOpt()
     au.setAwmOpt('data', 'chutchut')
     au.setAwmOpt('syncFreqBand', [233, 288])
     au.displayAwmOpt()
-    #print(au.au[88200:88220])
 
 if __name__ == '__main__':
     main()
