@@ -33,7 +33,7 @@ class AWM:
     #def __fmclt():
     
 def main():
-    awm = AWM('./originalAudio/classical.wav', AwmOpt())
+    awm = AWM('./testAudio/classical.wav', AwmOpt())
     awm.displayAwmOpt()
     frame = util.enframe(awm.au, awm.awmOpt.frameSize, awm.awmOpt.overlap)
     M=512
