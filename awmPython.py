@@ -36,7 +36,17 @@ def main():
     awm = AWM('./originalAudio/classical.wav', AwmOpt())
     awm.displayAwmOpt()
     frame = util.enframe(awm.au, awm.awmOpt.frameSize, awm.awmOpt.overlap)
-    print(frame.shape)
+    M=512
+    fmcltk = np.array(range(0, M+1), dtype=np.float64)
+    fmcltc = util.compExpo(8, 2*fmcltk+1) * util.compExpo(4*M, fmcltk)
+    X = util.fmclt2(frame, fmcltc)
+    print(X.shape)
+    print(X.dtype)
+    yBar = np.zeros((1024, X.shape[1]), dtype=np.float64)
+    for i in range(X.shape[1]):
+        yBar[:, i] = util.fimclt(X[:, i])
+    print(yBar.shape)
+    print(yBar.dtype)
 
 if __name__ == '__main__':
     main()
