@@ -45,5 +45,7 @@ def string2binary(message):
 def cipher2plain(cipher):
 	pos = (cipher == -1).nonzero()
 	cipher[pos] = 0
-	cipher = cipher.tolist()
-	
+	cipher = ''.join(str(i) for i in cipher)
+	byte = [cipher[i:i+8] for i in range(0, len(cipher), 8)]
+	plain = ''.join(chr(int(i, 2)) for i in byte)
+	return plain
