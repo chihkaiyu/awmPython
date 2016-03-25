@@ -1,11 +1,11 @@
-import scipy.io.wavfile
 import numpy as np
 from awmOptSet import AwmOpt
 import util
+import awmUtil
 
 class AWM:
     pass
-
+    '''
     def __init__(self, fileName, awmOpt):
         self.awmOpt = awmOpt
         # audio read
@@ -21,11 +21,13 @@ class AWM:
         else:
             self.au = fileName
 
+
     def setAwmOpt(self, key, value):
         self.awmOpt.setOpt(key, value)
 
     def displayAwmOpt(self):
         self.awmOpt.displayOpt()
+    '''
     #def awmEmbed():
 
     #def awmExtract():
@@ -33,18 +35,20 @@ class AWM:
     #def __fmclt():
     
 def main():
-    awm = AWM('./testAudio/classical.wav', AwmOpt())
-    awm.displayAwmOpt()
-    frame = util.enframe(awm.au, awm.awmOpt.frameSize, awm.awmOpt.overlap)
+    #awm = AWM('./testAudio/classical.wav', AwmOpt())
+    awmOpt = AwmOpt()
+    awmOpt.display()
+    fs, au = util.audioread('./testAudio/classical.wav')
+    frame = util.enframe(au, awmOpt.frameSize, awmOpt.overlap)
     M=512
     fmcltk = np.array(range(0, M+1), dtype=np.float64)
-    fmcltc = util.compExpo(8, 2*fmcltk+1) * util.compExpo(4*M, fmcltk)
-    X = util.fmclt2(frame, fmcltc)
+    fmcltc = awmUtil.compExpo(8, 2*fmcltk+1) * awmUtil.compExpo(4*M, fmcltk)
+    X = awmUtil.fmclt2(frame, fmcltc)
     print(X.shape)
     print(X.dtype)
     yBar = np.zeros((1024, X.shape[1]), dtype=np.float64)
     for i in range(X.shape[1]):
-        yBar[:, i] = util.fimclt(X[:, i])
+        yBar[:, i] = awmUtil.fimclt(X[:, i])
     print(yBar.shape)
     print(yBar.dtype)
 

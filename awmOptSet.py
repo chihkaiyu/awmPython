@@ -19,7 +19,7 @@ class AwmOpt:
         else:
             print('Undefined option: %s' % (key))
 
-    def displayOpt(self):
+    def display(self):
         print('==============================')
         print('Frame size: {0}'.format(self.frameSize))
         print('Overlap: {0}'.format(self.overlap))
