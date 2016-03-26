@@ -1,6 +1,7 @@
 import numpy as np
+import util
 
-class AudioWatermarking():
+class AudioWatermarkingMCLT():
 	pass
 
 	def __init__(self):
@@ -8,25 +9,34 @@ class AudioWatermarking():
 
 	def awmEmbed(self, au, awmOpt):
 		# set variables
-		M = awmOpt.frameSize / 2
-		C = AudioWatermarking.co(M)
-		S = AudioWatermarking.si(M)
-		W = AudioWatermarking.Wa(M)
+		M = int(awmOpt.frameSize / 2)
+		C = AudioWatermarkingMCLT.co(M)
+		S = AudioWatermarkingMCLT.si(M)
+		W = AudioWatermarkingMCLT.Wa(M)
 		C1 = C[:, 0:M]
 		C2 = C[:, M:2*M]
 		S1 = S[:, 0:M]
 		S2 = S[:, M:2*M]
-		W1 = W[1:M, 1:M]
+		W1 = W[0:M, 0:M]
 		W2 = W[M:2*M, M:2*M]
 		A_1 = C1 * W1 * W2 * S2.transpose()
 		A1 = C2 * W2 * W1 * S1.transpose()
 		B_1 = S1 * W1 * W2 * C2.transpose()
 		B1 = S2 * W2 * W1 * C1.transpose()
-		bitPerFrame = (awmOpt.dataFreqBand[1]-awmOpt.dataFreqBand[0]+1) / awmOpt.spreadLen
 		syncSeq = awmOpt.syncSeq.reshape(int((awmOpt.syncFreqBand[1]-awmOpt.syncFreqBand[0])/2+1) , -1)
-		dataSeq = AudioWatermarking.string2binary(awmOpt.data)
+		dataSeq = AudioWatermarkingMCLT.string2binary(awmOpt.data)
+		bitPerFrame = int((awmOpt.dataFreqBand[1]-awmOpt.dataFreqBand[0]+1) / awmOpt.spreadLen)
+		syncFrameSize = int(np.size(syncSeq) / ((awmOpt.syncFreqBand[1]-awmOpt.syncFreqBand[0])/2+1)*2)
+		dataFrameSize =  int(np.ceil(np.size(dataSeq)/bitPerFrame))
+		blockSize = syncFrameSize + dataFrameSize
+		frameMat = util.enframe(au, awmOpt.frameSize, awmOpt.overlap)
 
-
+		# data matrix
+		if (np.size(dataSeq) % bitPerFrame) != 0:
+			zeroToBePadded = np.zeros((1, dataFrameSize*bitPerFrame-np.size(dataSeq)), dtype=int)
+			remainPart = np.size(zeroToBePadded)
+			dataSeq = np.concatenate((dataSeq, zeroToBePadded), 1)
+		data = 
 
 	#def awmExtract(self):
 	
@@ -40,7 +50,7 @@ class AudioWatermarking():
 		M = len(x)/2
 		U = np.float64(np.sqrt(1/(2*M))) * np.fft.fft(x)
 		k = np.array(range(0, M+1), dtype=np.float64)
-		c = AudioWatermarking.compExpo(8, 2*k+1) * AudioWatermarking.compExpo(4*M, k)
+		c = AudioWatermarkingMCLT.compExpo(8, 2*k+1) * AudioWatermarkingMCLT.compExpo(4*M, k)
 		V = c * U[0:M+1]
 		X = 1j * V[0:M] + V[1:M+1]
 		return X
@@ -61,7 +71,7 @@ class AudioWatermarking():
 		M = len(X)
 		Y = np.zeros((2*M,), dtype=np.complex_)
 		k = np.array(range(1, M), dtype=np.float64)
-		c = AudioWatermarking.compExpo(8, 2*k+1) * AudioWatermarking.compExpo(4*M, k)
+		c = AudioWatermarkingMCLT.compExpo(8, 2*k+1) * AudioWatermarkingMCLT.compExpo(4*M, k)
 		Y[1:M] = (1/4) * np.conj(c) * (X[0:M-1] - 1j * X[1:M])
 		Y[0] = np.sqrt(1/8) * (X[0].real + X[0].imag)
 		Y[M] = -np.sqrt(1/8) * (X[M-1].real + X[M-1].imag)
@@ -100,3 +110,15 @@ class AudioWatermarking():
 	def Wa(M):
 		W = np.diag(np.array([-np.sin((i+0.5)*np.pi/(2*M)) for i in range(0, 2*M)], dtype=np.float64))
 		return W
+
+def main():
+	from awmOpt import AwmOptSet
+	import util
+	fs, au = util.audioread('./testAudio/classical.wav')
+	awmOpt = AwmOptSet()
+	awmOpt.display()
+	awm = AudioWatermarkingMCLT()
+	awm.awmEmbed(au, awmOpt)
+
+if __name__ == '__main__':
+	main()
