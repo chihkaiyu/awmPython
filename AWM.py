@@ -6,9 +6,29 @@ class AudioWatermarking():
 	def __init__(self):
 		pass
 
-	def awmEmbed(self):
+	def awmEmbed(self, au, awmOpt):
+		# set variables
+		M = awmOpt.frameSize / 2
+		C = AudioWatermarking.co(M)
+		S = AudioWatermarking.si(M)
+		W = AudioWatermarking.Wa(M)
+		C1 = C[:, 0:M]
+		C2 = C[:, M:2*M]
+		S1 = S[:, 0:M]
+		S2 = S[:, M:2*M]
+		W1 = W[1:M, 1:M]
+		W2 = W[M:2*M, M:2*M]
+		A_1 = C1 * W1 * W2 * S2.transpose()
+		A1 = C2 * W2 * W1 * S1.transpose()
+		B_1 = S1 * W1 * W2 * C2.transpose()
+		B1 = S2 * W2 * W1 * C1.transpose()
+		bitPerFrame = (awmOpt.dataFreqBand[1]-awmOpt.dataFreqBand[0]+1) / awmOpt.spreadLen
+		syncSeq = awmOpt.syncSeq.reshape(int((awmOpt.syncFreqBand[1]-awmOpt.syncFreqBand[0])/2+1) , -1)
+		dataSeq = AudioWatermarking.string2binary(awmOpt.data)
 
-	def awmExtract(self):
+
+
+	#def awmExtract(self):
 	
 	@staticmethod
 	def compExpo(M, r):
@@ -20,7 +40,7 @@ class AudioWatermarking():
 		M = len(x)/2
 		U = np.float64(np.sqrt(1/(2*M))) * np.fft.fft(x)
 		k = np.array(range(0, M+1), dtype=np.float64)
-		c = compExpo(8, 2*k+1) * compExpo(4*M, k)
+		c = AudioWatermarking.compExpo(8, 2*k+1) * AudioWatermarking.compExpo(4*M, k)
 		V = c * U[0:M+1]
 		X = 1j * V[0:M] + V[1:M+1]
 		return X
@@ -41,7 +61,7 @@ class AudioWatermarking():
 		M = len(X)
 		Y = np.zeros((2*M,), dtype=np.complex_)
 		k = np.array(range(1, M), dtype=np.float64)
-		c = compExpo(8, 2*k+1) * compExpo(4*M, k)
+		c = AudioWatermarking.compExpo(8, 2*k+1) * AudioWatermarking.compExpo(4*M, k)
 		Y[1:M] = (1/4) * np.conj(c) * (X[0:M-1] - 1j * X[1:M])
 		Y[0] = np.sqrt(1/8) * (X[0].real + X[0].imag)
 		Y[M] = -np.sqrt(1/8) * (X[M-1].real + X[M-1].imag)
@@ -65,3 +85,18 @@ class AudioWatermarking():
 		byte = [cipher[i:i+8] for i in range(0, len(cipher), 8)]
 		plain = ''.join(chr(int(i, 2)) for i in byte)
 		return plain
+
+	@staticmethod
+	def co(M):
+		C = np.array([[np.sqrt(2/M)*np.cos((j+((M+1)/2))*(i+0.5)*np.pi/M) for j in range(0, 2*M)] for i in range(0, M)], dtype=np.float64)
+		return C
+
+	@staticmethod
+	def si(M):
+		S = np.array([[np.sqrt(2/M)*np.sin((j+((M+1)/2))*(i+0.5)*np.pi/M) for j in range(0, 2*M)] for i in range(0, M)], dtype=np.float64)
+		return S
+
+	@staticmethod
+	def Wa(M):
+		W = np.diag(np.array([-np.sin((i+0.5)*np.pi/(2*M)) for i in range(0, 2*M)], dtype=np.float64))
+		return W
