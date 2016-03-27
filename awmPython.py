@@ -1,7 +1,7 @@
 import numpy as np
-from awmOpt import AwmOptSet
+from awmOptSet import AwmOptSet
 import util
-from AWM import AudioWatermarkingMCLT as awm
+from audioWatermarking import AudioWatermarkingMCLT as awm
 
     
 def main():

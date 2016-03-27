@@ -1,6 +1,6 @@
 import numpy as np
 
-class AwmOpt:
+class AwmOptSet:
     pass
 
     def __init__(self):
