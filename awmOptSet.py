@@ -3,15 +3,20 @@ import numpy as np
 class AwmOptSet:
     pass
 
-    def __init__(self):
-        self.frameSize = 1024
-        self.syncFreqBand = [149, 185]
-        self.dataFreqBand = [149, 184]
-        self.spreadLen = 36
-        self.overlap = 512
-        self.data = 'Mirlab'
-        self.syncSeq = np.array([[1, 1, -1, 1, 1, -1, -1, 1, 1, 1, -1, 1, 1, -1, 1, -1, -1, 1, 1], [1, 1, -1, 1, 1, 1, 1, 1, -1, 1, -1, 1, -1, -1, -1, -1, 1, 1, -1], [1, -1, -1, -1, 1, 1, -1, -1, -1, 1, 1, 1, -1, 1, 1, -1, -1, -1, 1], [-1, 1, -1, 1, -1, 1, 1, 1, 1, 1, -1, -1, -1, 1, -1, 1, -1, 1, -1], [-1, -1, 1, -1, -1, 1, 1, 1, 1, -1, 1, 1, -1, 1, -1, -1, 1, 1, 1], [-1, 1, -1, -1, -1, -1, 1, -1, 1, -1, 1, -1, 1, 1, 1, -1, -1, -1, 1]])
-        self.method = 'mclt'
+    def __init__(self, method):
+        if method == 'mclt':
+            self.frameSize = 1024
+            self.syncFreqBand = [149, 185]
+            self.dataFreqBand = [149, 184]
+            self.spreadLen = 36
+            self.overlap = 512
+            self.data = 'Mirlab'
+            self.syncSeq = np.array([[1, 1, -1, 1, 1, -1, -1, 1, 1, 1, -1, 1, 1, -1, 1, -1, -1, 1, 1], [1, 1, -1, 1, 1, 1, 1, 1, -1, 1, -1, 1, -1, -1, -1, -1, 1, 1, -1], [1, -1, -1, -1, 1, 1, -1, -1, -1, 1, 1, 1, -1, 1, 1, -1, -1, -1, 1], [-1, 1, -1, 1, -1, 1, 1, 1, 1, 1, -1, -1, -1, 1, -1, 1, -1, 1, -1], [-1, -1, 1, -1, -1, 1, 1, 1, 1, -1, 1, 1, -1, 1, -1, -1, 1, 1, 1], [-1, 1, -1, -1, -1, -1, 1, -1, 1, -1, 1, -1, 1, 1, 1, -1, -1, -1, 1]])
+            self.method = 'mclt'
+        elif method == 'dct':
+            pass
+        else:
+            print('Unknown method')
 
     def setOpt(self, key, value):
         if hasattr(self, key):

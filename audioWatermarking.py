@@ -39,13 +39,21 @@ class AudioWatermarkingMCLT():
 
 		# fast MCLT
 		fmcltk = np.array(range(0, M+1), dtype=np.float64)
-    	fmcltc = AudioWatermarkingMCLT.compExpo(8, 2*fmcltk+1) * AudioWatermarkingMCLT.compExpo(4*M, fmcltk)
-    	X = AudioWatermarkingMCLT.fmclt2(frameMat, fmcltc)
+		fmcltc = AudioWatermarkingMCLT.compExpo(8, 2*fmcltk+1) * AudioWatermarkingMCLT.compExpo(4*M, fmcltk)
+		X = AudioWatermarkingMCLT.fmclt2(frameMat, fmcltc)
 
-    	# data Embed
-    	xBar = X
-    	Xc = X.real
-    	Xs = -X.imag
+		# data Embed
+		xBar = X
+		Xc = X.real
+		Xs = -X.imag
+		for b in range(0, int(np.floor(X.shape[1]/blockSize))*blockSize, blockSize):
+			# synchronization
+			# i is for frame index
+			# k is for frequency index
+			#i = range(b+1, b+syncFrameSize-1, 2)
+			#k = range(awmOpt.syncFreqBand[0], awmOpt.syncFreqBand[1], 2)
+			#xBarCSub = A_1[np.ix_(k, range(0, A_1.shape[1]))]*Xs[, i-1]
+
 
 	#def awmExtract(self):
 	
