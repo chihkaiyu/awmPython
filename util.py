@@ -8,7 +8,7 @@ def enframe(y, frameSize, overlap):
 
 	step = frameSize - overlap
 	frameCount = int(np.floor((len(y)-overlap)/step))
-	out = np.zeros((frameSize, frameCount), dtype=np.float64)
+	out = np.matrix(np.zeros((frameSize, frameCount), dtype=np.float64))
 	for i in range(frameCount):
 		startIndex = i*step+1
 		out[:, i] = y[startIndex:(startIndex+frameSize), 0]
@@ -17,14 +17,25 @@ def enframe(y, frameSize, overlap):
 def audioread(fileName):
 	fs, au = scipy.io.wavfile.read(fileName)
 	# conver to float64 and normalize between -1 and 1
-	if au.dtype == 'int8':
-		au = au.astype(np.float64) / (2**7)
+	if au.dtype == 'uint8':
+		au = np.matrix(au.astype(np.float64) / (2**7)).reshape(au.shape[0], -1)
 	elif au.dtype == 'int16':
-		au = au.astype(np.float64) / (2**15)
-	elif au.dtype == 'int24':
-		au = au.astype(np.float64) / (2**23)
-	elif au.dtype == 'int32':
-		au = au.astype(np.float64) / (2**31)
-	elif au.dtype == 'int64':
-		au = au.astype(np.float64) / (2**63)
+		au = np.matrix(au.astype(np.float64) / (2**15)).reshape(au.shape[0], -1)
+	else:
+		au = np.matrix(au.astype(np.float64)).reshape(au.shape[0], -1)
 	return (fs, au)
+
+def main():
+	import os
+	fileList = os.listdir('./testAudio/')
+	for i in fileList:
+		fs, au = audioread(os.path.join(os.getcwd(), 'testAudio', i))
+		print('==========================')
+		print(i)
+		print(au.dtype)
+		print(au.shape)
+		print('==========================')
+
+
+if __name__ == '__main__':
+	main()

@@ -50,9 +50,11 @@ class AudioWatermarkingMCLT():
 			# synchronization
 			# i is for frame index
 			# k is for frequency index
-			#i = range(b+1, b+syncFrameSize-1, 2)
-			#k = range(awmOpt.syncFreqBand[0], awmOpt.syncFreqBand[1], 2)
-			#xBarCSub = A_1[np.ix_(k, range(0, A_1.shape[1]))]*Xs[, i-1]
+			i = range(b+1, b+syncFrameSize-1, 2)
+			k = range(awmOpt.syncFreqBand[0], awmOpt.syncFreqBand[1], 2)
+			xBarCSub = A_1[np.ix_(k, range(0, A_1.shape[1]))]*Xs[np.ix_(range(Xs.shape[0]), i-1)] + 0.5*Xs[np.ix_(k-1, i)] - 0.5*Xs[np.ix_(k+1, i)] + A1[np.ix_(k, range(0, A1.shape[1]))]*Xs[np.ix_(range(0, Xs.shape[0]), i+1)]
+			XBarC = np.absolute(X[np.ix_(k, i)]) 
+
 
 
 	#def awmExtract(self):
