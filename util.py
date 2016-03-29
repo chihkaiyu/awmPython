@@ -41,18 +41,18 @@ def audioread(fileName):
 	else:
 		au = np.matrix(au.astype(np.float64)).reshape(au.shape[0], -1)
 	'''
-	return (fs, au, bitPerSample)
+	return (fs, au)
 
 def main():
 	import os
 	fileList = os.listdir('./testAudio/')
 	for i in fileList:
-		fs, au, bitPerSample = audioread(os.path.join(os.getcwd(), 'testAudio', i))
+		fs, au = audioread(os.path.join(os.getcwd(), 'testAudio', i))
 		print('==========================')
 		print(i)
-		print(bitPerSample)
 		print(au.dtype)
 		print(au.shape)
+		print(au[44100])
 		print('==========================')
 
 

@@ -67,10 +67,10 @@ class AudioWatermarkingMCLT():
 	def fmclt(x):
 		# MCLT of a single vector
 		M = len(x)/2
-		U = np.float64(np.sqrt(1/(2*M))) * np.fft.fft(x)
-		k = np.array(range(0, M+1), dtype=np.float64)
-		c = AudioWatermarkingMCLT.compExpo(8, 2*k+1) * AudioWatermarkingMCLT.compExpo(4*M, k)
-		V = c * U[0:M+1]
+		U = np.matrix(np.sqrt(1/(2*M)) * np.fft.fft(x))
+		k = np.matrix(range(0, M+1), dtype=np.float64).reshape(-1, 1)
+		c = np.multiply(AudioWatermarkingMCLT.compExpo(8, 2*k+1), AudioWatermarkingMCLT.compExpo(4*M, k))
+		V = np.multiply(c, U[0:M+1])
 		X = 1j * V[0:M] + V[1:M+1]
 		return X
 
@@ -78,25 +78,50 @@ class AudioWatermarkingMCLT():
 	def fmclt2(frameMat, c):
 		# MCLT of a frame matrix
 		M = frameMat.shape[0]/2
-		X = np.zeros((M, frameMat.shape[1]), dtype=np.complex_)
+		X = np.matrix(np.zeros((M, frameMat.shape[1]), dtype=np.complex_))
 		for i in range(frameMat.shape[1]):
-			U = np.float64(np.sqrt(1/(2*M))) * np.fft.fft(frameMat[:, i])
-			V = c * U[0:M+1]
+			U = np.matrix(np.sqrt(1/(2*M)) * np.fft.fft(frameMat[:, i]))
+			V = np.multiply(c, U[0:M+1])
 			X[:, i] = 1j * V[0:M] + V[1:M+1]
 		return X
 
 	@staticmethod
 	def fimclt(X):
 		M = len(X)
-		Y = np.zeros((2*M,), dtype=np.complex_)
-		k = np.array(range(1, M), dtype=np.float64)
-		c = AudioWatermarkingMCLT.compExpo(8, 2*k+1) * AudioWatermarkingMCLT.compExpo(4*M, k)
-		Y[1:M] = (1/4) * np.conj(c) * (X[0:M-1] - 1j * X[1:M])
+		Y = np.matrix(np.zeros((2*M, 1), dtype=np.complex_))
+		k = np.matrix(range(1, M), dtype=np.float64).reshape(-1, 1)
+		c = np.multiply(AudioWatermarkingMCLT.compExpo(8, 2*k+1), AudioWatermarkingMCLT.compExpo(4*M, k))
+		Y[1:M] = (1/4) * np.multiply(np.conj(c), (X[0:M-1] - 1j * X[1:M]))
 		Y[0] = np.sqrt(1/8) * (X[0].real + X[0].imag)
 		Y[M] = -np.sqrt(1/8) * (X[M-1].real + X[M-1].imag)
 		Y[M+1:2*M] = np.conj(Y[range(M-1, 0, -1)])
-		y = np.fft.ifft(np.sqrt(2*M) * Y).real
-		return y
+		yBar = np.matrix(np.fft.ifft(np.sqrt(2*M) * Y).real)
+		return yBar
+
+	@staticmethod
+	def fimclt2(X, awmOpt):
+		M = X.shape[0]
+		Y = np.matrix(np.zeros((2*M, 1), dtype=np.complex_))
+		yBar = np.matrix(np.zeros((2*M, X.shape[1]), dtype=np.float64))
+		k = np.matrix(range(1, M), dtype=np.float64).reshape(-1, 1)
+		c = np.multiply(AudioWatermarkingMCLT.compExpo(8, 2*k+1), AudioWatermarkingMCLT.compExpo(4*M, k))
+		# fast inverse mclt
+		for i in range(0, X.shape[1]):
+			Y[1:M] = (1/4) * np.multiply(np.conj(c), (X[0:M-1, i] - 1j * X[1:M, i]))
+			Y[0] = np.sqrt(1/8) * (X[0, i].real + X[0, i].imag)
+			Y[M] = -np.sqrt(1/8) * (X[M-1, i].real + X[M-1, i].imag)
+			Y[M+1:2*M] = np.conj(Y[range(M-1, 0, -1)])
+			yBar[:, i] = np.matrix(np.fft.ifft(np.sqrt(2*M) * Y).real)
+		
+		# overlap add
+		for i in range(1, yBar.shape[1]-1):
+			yBar[:, i] = np.vstack((yBar[awmOpt.frameSize/2:, i-1], yBar[0:awmOpt.frameSize/2, i+1])) + yBar[:, i]
+		# deal with first and last frame
+		yBar[awmOpt.frameSize/2:, 0] = yBar[awmOpt.frameSize/2:, 0] + yBar[0:awmOpt.frameSize/2, 1]
+		yBar[0:awmOpt.frameSize/2, -1:] = yBar[0:awmOpt.frameSize/2, -1:] + yBar[awmOpt.frameSize/2:, -2]
+		output = np.vstack((yBar[:, 0], yBar[awmOpt.frameSize/2:, 1:].reshape(-1, 1)))
+		return output
+
 
 	@staticmethod
 	def string2binary(message):

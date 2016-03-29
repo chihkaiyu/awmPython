@@ -11,8 +11,8 @@ def main():
     fs, au = util.audioread('./testAudio/classical.wav')
     frame = util.enframe(au, awmOpt.frameSize, awmOpt.overlap)
     M=512
-    fmcltk = np.array(range(0, M+1), dtype=np.float64)
-    fmcltc = awm.compExpo(8, 2*fmcltk+1) * awm.compExpo(4*M, fmcltk)
+    fmcltk = np.matrix(range(0, M+1), dtype=np.float64).reshape(-1, 1)
+    fmcltc = np.multiply(awm.compExpo(8, 2*fmcltk+1), awm.compExpo(4*M, fmcltk))
     X = awm.fmclt2(frame, fmcltc)
     print(X.shape)
     print(X.dtype)
