@@ -125,8 +125,8 @@ class AudioWatermarkingMCLT():
 
 	@staticmethod
 	def string2binary(message):
-		ascii = [bin(ord(i))[2:].zfill(8) for i in message]
-		code = np.array(list(''.join(ascii)), dtype=int)
+		asc = [bin(ord(i))[2:].zfill(8) for i in message]
+		code = np.matrix(list(''.join(asc)), dtype=int)
 		pos = (code==0).nonzero()
 		code[pos] = -1
 		return code
@@ -135,24 +135,25 @@ class AudioWatermarkingMCLT():
 	def cipher2plain(cipher):
 		pos = (cipher == -1).nonzero()
 		cipher[pos] = 0
-		cipher = ''.join(str(i) for i in cipher)
-		byte = [cipher[i:i+8] for i in range(0, len(cipher), 8)]
-		plain = ''.join(chr(int(i, 2)) for i in byte)
+		byte = [str(cipher[0, i]) for i in range(0, max(cipher.shape))]
+		byte = ''.join(byte)
+		plain = [chr(int(byte[i:i+8], 2)) for i in range(0, len(byte), 8)]
+		plain = ''.join(plain)
 		return plain
 
 	@staticmethod
 	def co(M):
-		C = np.array([[np.sqrt(2/M)*np.cos((j+((M+1)/2))*(i+0.5)*np.pi/M) for j in range(0, 2*M)] for i in range(0, M)], dtype=np.float64)
+		C = np.matrix([[np.sqrt(2/M)*np.cos((j+((M+1)/2))*(i+0.5)*np.pi/M) for j in range(0, 2*M)] for i in range(0, M)], dtype=np.float64)
 		return C
 
 	@staticmethod
 	def si(M):
-		S = np.array([[np.sqrt(2/M)*np.sin((j+((M+1)/2))*(i+0.5)*np.pi/M) for j in range(0, 2*M)] for i in range(0, M)], dtype=np.float64)
+		S = np.matrix([[np.sqrt(2/M)*np.sin((j+((M+1)/2))*(i+0.5)*np.pi/M) for j in range(0, 2*M)] for i in range(0, M)], dtype=np.float64)
 		return S
 
 	@staticmethod
 	def Wa(M):
-		W = np.diag(np.array([-np.sin((i+0.5)*np.pi/(2*M)) for i in range(0, 2*M)], dtype=np.float64))
+		W = np.matrix(np.diag(np.array([-np.sin((i+0.5)*np.pi/(2*M)) for i in range(0, 2*M)], dtype=np.float64)))
 		return W
 
 def main():
