@@ -6,8 +6,9 @@ class AwmOptSet:
     def __init__(self, method):
         if method == 'mclt':
             self.frameSize = 1024
-            self.syncFreqBand = [149, 185]
-            self.dataFreqBand = [149, 184]
+            # need to minus one since the index starts 0 in python
+            self.syncFreqBand = [148, 184]
+            self.dataFreqBand = [148, 183]
             self.spreadLen = 36
             self.overlap = 512
             self.data = 'Mirlab'
