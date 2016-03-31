@@ -23,10 +23,10 @@ class AudioWatermarkingMCLT():
 		A1 = C2 * W2 * W1 * S1.transpose()
 		B_1 = S1 * W1 * W2 * C2.transpose()
 		B1 = S2 * W2 * W1 * C1.transpose()
-		syncSeq = awmOpt.syncSeq.reshape(int((awmOpt.syncFreqBand[1]-awmOpt.syncFreqBand[0])/2+1) , -1)
+		sync = awmOpt.syncSeq.reshape(int((awmOpt.syncFreqBand[1]-awmOpt.syncFreqBand[0])/2+1) , -1)
 		dataSeq = AudioWatermarkingMCLT.string2binary(awmOpt.data)
 		bitPerFrame = int((awmOpt.dataFreqBand[1]-awmOpt.dataFreqBand[0]+1) / awmOpt.spreadLen)
-		syncFrameSize = int(np.size(syncSeq) / ((awmOpt.syncFreqBand[1]-awmOpt.syncFreqBand[0])/2+1)*2)
+		syncFrameSize = int(np.size(sync) / ((awmOpt.syncFreqBand[1]-awmOpt.syncFreqBand[0])/2+1)*2)
 		dataFrameSize =  int(np.ceil(np.size(dataSeq)/bitPerFrame))
 		blockSize = syncFrameSize + dataFrameSize
 		frameMat = util.enframe(au, awmOpt.frameSize, awmOpt.overlap)
@@ -34,13 +34,13 @@ class AudioWatermarkingMCLT():
 		if (np.size(dataSeq) % bitPerFrame) != 0:
 			zeroToBePadded = np.zeros((1, dataFrameSize*bitPerFrame-np.size(dataSeq)), dtype=int)
 			remainPart = np.size(zeroToBePadded)
-			dataSeq = np.concatenate((dataSeq, zeroToBePadded), 1)
+			dataSeq = np.concatenate((dataSqe, zeroToBePadded), 1)
 		data = np.kron(np.ones((awmOpt.spreadLen, 1)), dataSeq).reshape(awmOpt.dataFreqBand[1]-awmOpt.dataFreqBand[0]+1, -1)
 
 		# fast MCLT
-		fmcltk = np.array(range(0, M+1), dtype=np.float64)
-		fmcltc = AudioWatermarkingMCLT.compExpo(8, 2*fmcltk+1) * AudioWatermarkingMCLT.compExpo(4*M, fmcltk)
-		X = AudioWatermarkingMCLT.fmclt2(frameMat, fmcltc)
+		#fmcltk = np.array(range(0, M+1), dtype=np.float64)
+		#fmcltc = AudioWatermarkingMCLT.compExpo(8, 2*fmcltk+1) * AudioWatermarkingMCLT.compExpo(4*M, fmcltk)
+		X = AudioWatermarkingMCLT.fmclt2(frameMat)
 
 		# data Embed
 		xBar = X
@@ -50,12 +50,26 @@ class AudioWatermarkingMCLT():
 			# synchronization
 			# i is for frame index
 			# k is for frequency index
-			i = range(b+1, b+syncFrameSize-1, 2)
-			k = range(awmOpt.syncFreqBand[0], awmOpt.syncFreqBand[1], 2)
+			i = np.arange(b+1, b+syncFrameSize, 2)
+			k = np.arange(awmOpt.syncFreqBand[0], awmOpt.syncFreqBand[1]+1, 2)
 			xBarCSub = A_1[np.ix_(k, range(0, A_1.shape[1]))]*Xs[np.ix_(range(Xs.shape[0]), i-1)] + 0.5*Xs[np.ix_(k-1, i)] - 0.5*Xs[np.ix_(k+1, i)] + A1[np.ix_(k, range(0, A1.shape[1]))]*Xs[np.ix_(range(0, Xs.shape[0]), i+1)]
-			XBarC = np.absolute(X[np.ix_(k, i)]) 
+			xBarC = np.multiply(np.absolute(X[np.ix_(k, i)]), sync) - xBarCSub
+			xBarS = -(B_1[np.ix_(k, range(0, B_1.shape[1]))]*Xc[np.ix_(range(0, Xc.shape[0]), i-1)] - 0.5*Xc[np.ix_(k-1, i)] + 0.5*Xc[np.ix_(k+1, 1)] + B1[np.ix_(k, range(B1.shape[1]))]*Xc[np.ix_(range(0, Xc.shape[0], i+1))])
+			xBar[np.ix_(k, i)] = xBarC - 1j * xBarS
 
+			# data
+			# p is for frame index
+			# q is for frequency index
+			p = np.arange(b+syncFrameSize, b+syncFrameSize+dataFrameSize)
+			q = np.arange(awmOpt.dataFreqBand[0], awmOpt.dataFreqBand[1]+1)
+			xBar[np.ix_(q, p)] = np.multiply(np.absolute(X[np.ix_(q, p)]), data)
+			# copy original value
+			if (np.size(dataSeq) % bitPerFrame) != 0:
+				xBar[np.ix_(q[awmOpt.dataFreqBand[1]-remainPart+1:awmOpt.dataFreqBand[1]], p[-1])] = X[np.ix_(q[awmOpt.dataFreqBand[1]-remainPart+1:awmOpt.dataFreqBand[1]], p[-1])]
 
+			# fast inverse MCLT
+			output = fimclt2(xBar, awmOpt)
+			return output
 
 	#def awmExtract(self):
 	
@@ -74,8 +88,22 @@ class AudioWatermarkingMCLT():
 		X = 1j * V[0:M] + V[1:M+1]
 		return X
 
+	# if you need to call fmclt just one time, use this
 	@staticmethod
-	def fmclt2(frameMat, c):
+	def fmclt2(frameMat):
+		M = frameMat.shape[0]/2
+		k = np.matrix(range(0, M+1), dtype=np.float64).reshape(-1, 1)
+		c = np.multiply(AudioWatermarkingMCLT.compExpo(8, 2*k+1), AudioWatermarkingMCLT.compExpo(4*M, k))
+		X = np.matrix(np.zeros((M, frameMat.shape[1]), dtype=np.complex_))
+		for i in range(frameMat.shape[1]):
+			U = np.matrix(np.sqrt(1/(2*M)) * np.fft.fft(frameMat[:, i]))
+			V = np.multiply(c, U[0:M+1])
+			X[:, i] = 1j * V[0:M] + V[1:M+1]
+		return X
+
+	# if you need to call fmclt function many times, use this
+	@staticmethod
+	def fmclt3(frameMat, c):
 		# MCLT of a frame matrix
 		M = frameMat.shape[0]/2
 		X = np.matrix(np.zeros((M, frameMat.shape[1]), dtype=np.complex_))
@@ -157,13 +185,15 @@ class AudioWatermarkingMCLT():
 		return W
 
 def main():
-	from awmOpt import AwmOptSet
-	import util
-	fs, au = util.audioread('./testAudio/classical.wav')
-	awmOpt = AwmOptSet()
+	from awmOptSet import AwmOptSet as awmOptSet
+	#import util
+	fs, au = util.audioread('./testAudio/mono.wav')
+	awmOpt = awmOptSet('mclt')
 	awmOpt.display()
-	awm = AudioWatermarkingMCLT()
-	awm.awmEmbed(au, awmOpt)
+	output = AudioWatermarkingMCLT.awmEmbed(au, awmOpt)
+	print(output.shape)
+	print(output.dtype)
+	print(type(output))
 
 if __name__ == '__main__':
 	main()
