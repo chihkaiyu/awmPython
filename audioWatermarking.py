@@ -7,7 +7,8 @@ class AudioWatermarkingMCLT():
 	def __init__(self):
 		pass
 
-	def awmEmbed(self, au, awmOpt):
+	@staticmethod
+	def awmEmbed(au, awmOpt):
 		# set variables
 		M = int(awmOpt.frameSize / 2)
 		C = AudioWatermarkingMCLT.co(M)
@@ -54,7 +55,7 @@ class AudioWatermarkingMCLT():
 			k = np.arange(awmOpt.syncFreqBand[0], awmOpt.syncFreqBand[1]+1, 2)
 			xBarCSub = A_1[np.ix_(k, range(0, A_1.shape[1]))]*Xs[np.ix_(range(Xs.shape[0]), i-1)] + 0.5*Xs[np.ix_(k-1, i)] - 0.5*Xs[np.ix_(k+1, i)] + A1[np.ix_(k, range(0, A1.shape[1]))]*Xs[np.ix_(range(0, Xs.shape[0]), i+1)]
 			xBarC = np.multiply(np.absolute(X[np.ix_(k, i)]), sync) - xBarCSub
-			xBarS = -(B_1[np.ix_(k, range(0, B_1.shape[1]))]*Xc[np.ix_(range(0, Xc.shape[0]), i-1)] - 0.5*Xc[np.ix_(k-1, i)] + 0.5*Xc[np.ix_(k+1, 1)] + B1[np.ix_(k, range(B1.shape[1]))]*Xc[np.ix_(range(0, Xc.shape[0], i+1))])
+			xBarS = -(B_1[np.ix_(k, range(0, B_1.shape[1]))]*Xc[np.ix_(range(0, Xc.shape[0]), i-1)] - 0.5*Xc[np.ix_(k-1, i)] + 0.5*Xc[np.ix_(k+1, i)] + B1[np.ix_(k, range(0, B1.shape[1]))]*Xc[np.ix_(range(0, Xc.shape[0]), i+1)])
 			xBar[np.ix_(k, i)] = xBarC - 1j * xBarS
 
 			# data
@@ -68,8 +69,8 @@ class AudioWatermarkingMCLT():
 				xBar[np.ix_(q[awmOpt.dataFreqBand[1]-remainPart+1:awmOpt.dataFreqBand[1]], p[-1])] = X[np.ix_(q[awmOpt.dataFreqBand[1]-remainPart+1:awmOpt.dataFreqBand[1]], p[-1])]
 
 			# fast inverse MCLT
-			output = fimclt2(xBar, awmOpt)
-			return output
+			output = AudioWatermarkingMCLT.fimclt2(xBar, awmOpt)
+		return output
 
 	#def awmExtract(self):
 	
@@ -80,7 +81,7 @@ class AudioWatermarkingMCLT():
 	@staticmethod
 	def fmclt(x):
 		# MCLT of a single vector
-		M = len(x)/2
+		M =int(len(x)/2)
 		U = np.matrix(np.sqrt(1/(2*M)) * np.fft.fft(x))
 		k = np.matrix(range(0, M+1), dtype=np.float64).reshape(-1, 1)
 		c = np.multiply(AudioWatermarkingMCLT.compExpo(8, 2*k+1), AudioWatermarkingMCLT.compExpo(4*M, k))
@@ -91,7 +92,7 @@ class AudioWatermarkingMCLT():
 	# if you need to call fmclt just one time, use this
 	@staticmethod
 	def fmclt2(frameMat):
-		M = frameMat.shape[0]/2
+		M = int(frameMat.shape[0]/2)
 		k = np.matrix(range(0, M+1), dtype=np.float64).reshape(-1, 1)
 		c = np.multiply(AudioWatermarkingMCLT.compExpo(8, 2*k+1), AudioWatermarkingMCLT.compExpo(4*M, k))
 		X = np.matrix(np.zeros((M, frameMat.shape[1]), dtype=np.complex_))
@@ -194,6 +195,8 @@ def main():
 	print(output.shape)
 	print(output.dtype)
 	print(type(output))
+	return output
+	#util.audiowrite('test.wav', output, fs)
 
 if __name__ == '__main__':
 	main()
