@@ -1,6 +1,5 @@
 import numpy as np
 import wave
-import scipy.io.wavfile
 
 def enframe(y, frameSize, overlap):
 	if len(y.shape) == 2:
@@ -32,28 +31,40 @@ def audioread(fileName):
 		au = np.matrix(np.fromstring(strData, dtype=np.int16)/(2**(bitPerSample*8-1)), dtype=np.float64).reshape(-1, nChannels)
 	elif bitPerSample == 1:
 		au = np.matrix((np.array(np.fromstring(strData, dtype=np.uint8), dtype=np.float64)-128)/(2**(bitPerSample*8-1))).reshape(-1, nChannels)
-
-	'''
-	if au.dtype == 'uint8':
-		au = np.matrix(au.astype(np.float64) / (2**7)).reshape(au.shape[0], -1)
-	elif au.dtype == 'int16':
-		au = np.matrix(au.astype(np.float64) / (2**15)).reshape(au.shape[0], -1)
-	else:
-		au = np.matrix(au.astype(np.float64)).reshape(au.shape[0], -1)
-	'''
 	return (fs, au)
 
+def audiowrite(fileName, au, fs, **kwargs):
+	if len(kwargs) == 0:
+		bitPerSample = 16
+	else:
+		for i in kwargs:
+			if i == 'bitPerSample':
+				bitPerSample = kwargs[i]
+	if (bitPerSample % 8 != 0) or (bitPerSample > 32):
+		raise ValueError('Bit per sample should be 8, 16, 24 or 32.')
+	au = au*(2**(bitPerSample-1))
+	if bitPerSample == 8:
+		au = au + 128
+		au = au.astype(np.uint8)
+	elif bitPerSample == 16:
+		au = au.astype(np.int16)
+	elif bitPerSample == 24:
+		pass
+	elif bitPerSample == 32:
+		au = au.astype(np.int32)
+	audioFile = wave.open(fileName, 'wb')
+	audioFile.setnchannels(au.shape[1])
+	audioFile.setsampwidth(int(bitPerSample/8))
+	audioFile.setframerate(fs)
+	audioFile.writeframes(au.tostring())
+	audioFile.close()
+
 def main():
-	import os
-	fileList = os.listdir('./testAudio/')
-	for i in fileList:
-		fs, au = audioread(os.path.join(os.getcwd(), 'testAudio', i))
-		print('==========================')
-		print(i)
-		print(au.dtype)
-		print(au.shape)
-		print(au[44100])
-		print('==========================')
+	fs, au = audioread('testAudio/mono.wav')
+	audiowrite('test.wav', au, fs)
+	audiowrite('test8.wav', au, fs, bitPerSample=8)
+	audiowrite('test16.wav', au, fs, bitPerSample=16)
+	audiowrite('test32.wav', au, fs, bitPerSample=32)
 
 
 if __name__ == '__main__':
