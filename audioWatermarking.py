@@ -8,7 +8,7 @@ class AudioWatermarkingMCLT():
 		pass
 
 	@staticmethod
-	def awmEmbed(au, awmOpt):
+	def singleChannelEmbed(au, awmOpt):
 		# set variables
 		M = int(awmOpt.frameSize / 2)
 		C = AudioWatermarkingMCLT.co(M)
@@ -147,9 +147,9 @@ class AudioWatermarkingMCLT():
 		for i in range(1, yBar.shape[1]-1):
 			output[:, i] = np.vstack((yBar[awmOpt.frameSize/2:, i-1], yBar[0:awmOpt.frameSize/2, i+1])) + yBar[:, i]
 		# deal with first and last frame
-		output[awmOpt.frameSize/2:, 0] = yBar[awmOpt.frameSize/2:, 0] + yBar[0:awmOpt.frameSize/2, 1]
-		output[0:awmOpt.frameSize/2, -1] = yBar[0:awmOpt.frameSize/2, -1] + yBar[awmOpt.frameSize/2:, -2]
-		output2 = np.vstack((output[:, 0], output[awmOpt.frameSize/2:, 1:].reshape(-1, 1)))
+		output[:, 0] = output[:, 0] + np.vstack((np.zeros((int(awmOpt.frameSize/2), 1), dtype=np.float64), output[0:int(awmOpt.frameSize/2), 1]))
+		output[:, -1] = output[:, -1] + np.vstack((output[awmOpt.frameSize/2:, -2], np.zeros((int(awmOpt.frameSize/2), 1), dtype=np.float64)))
+		output2 = np.vstack((output[:, 0], (output[awmOpt.frameSize/2:, 1:].T.reshape(-1, 1))))
 		return output2
 
 
@@ -191,8 +191,8 @@ def main():
 	#import util
 	fs, au = util.audioread('./testAudio/mono.wav')
 	awmOpt = awmOptSet('mclt')
-	frameMat = util.enframe(au, 1024, 512)
-	X = AudioWatermarkingMCLT.fmclt2(frameMat)
+	haha = AudioWatermarkingMCLT.awmEmbed(au, awmOpt)
+	util.audiowrite('hhh.wav', haha, fs)
 
 if __name__ == '__main__':
 	main()
