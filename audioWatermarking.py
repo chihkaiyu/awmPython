@@ -24,7 +24,7 @@ class AudioWatermarkingMCLT():
 		A1 = C2 * W2 * W1 * S1.transpose()
 		B_1 = S1 * W1 * W2 * C2.transpose()
 		B1 = S2 * W2 * W1 * C1.transpose()
-		sync = awmOpt.syncSeq.reshape(int((awmOpt.syncFreqBand[1]-awmOpt.syncFreqBand[0])/2+1) , -1)
+		sync = awmOpt.syncSeq.reshape(-1, int((awmOpt.syncFreqBand[1]-awmOpt.syncFreqBand[0])/2+1)).T
 		dataSeq = AudioWatermarkingMCLT.string2binary(awmOpt.data)
 		bitPerFrame = int((awmOpt.dataFreqBand[1]-awmOpt.dataFreqBand[0]+1) / awmOpt.spreadLen)
 		syncFrameSize = int(np.size(sync) / ((awmOpt.syncFreqBand[1]-awmOpt.syncFreqBand[0])/2+1)*2)
@@ -36,7 +36,7 @@ class AudioWatermarkingMCLT():
 			zeroToBePadded = np.zeros((1, dataFrameSize*bitPerFrame-np.size(dataSeq)), dtype=int)
 			remainPart = np.size(zeroToBePadded)
 			dataSeq = np.concatenate((dataSqe, zeroToBePadded), 1)
-		data = np.kron(np.ones((awmOpt.spreadLen, 1)), dataSeq).reshape(awmOpt.dataFreqBand[1]-awmOpt.dataFreqBand[0]+1, -1)
+		data = np.kron(np.ones((awmOpt.spreadLen, 1)), dataSeq).T.reshape(-1, awmOpt.dataFreqBand[1]-awmOpt.dataFreqBand[0]+1).T
 
 		# fast MCLT
 		#fmcltk = np.array(range(0, M+1), dtype=np.float64)
@@ -75,6 +75,26 @@ class AudioWatermarkingMCLT():
 	#def awmExtract(self):
 	
 	@staticmethod
+	def findSyncFast(y, base, length, awmOpt):
+		M = int(awmOpt.frameSize/2)
+		cor = np.matrix(np.zeros((length, 1), dtype=np.complex_))
+		sync = awmOpt.syncSeq.reshape(-1, int((awmOpt.syncFreqBand[1]-awmOpt.syncFreqBand[0])/2+1)).T
+		syncFrameSize = int(np.size(sync) / ((awmOpt.syncFreqBand[1]-awmOpt.syncFreqBand[0])/2+1)*2)
+		i = np.arange(1, syncFrameSize, 2)
+		k = np.arange(awmOpt.syncFreqBand[0], awmOpt.syncFreqBand[1]+1, 2)
+
+		fmcltk = np.array(range(0, M+1), dtype=np.float64)
+		fmcltc = AudioWatermarkingMCLT.compExpo(8, 2*fmcltk+1) * AudioWatermarkingMCLT.compExpo(4*M, fmcltk)
+		for i in range(base, base+length):
+			truncated = util.enframe(y[i:i+(syncFrameSize-1)*512+1024], awmOpt.frameSize, awmOpt.overlap)
+			embed = AudioWatermarkingMCLT.fmclt3(truncated, fmcltc)
+			cor[i-base, 0] = np.sum(np.divide(np.multiply(embed[k, j], sync), np.absolute(embed[k, j])))
+		return cor
+
+
+
+
+	@staticmethod
 	def compExpo(M, r):
 		return np.exp(-1j*2*np.pi*r/M)
 
@@ -106,7 +126,7 @@ class AudioWatermarkingMCLT():
 	@staticmethod
 	def fmclt3(frameMat, c):
 		# MCLT of a frame matrix
-		M = frameMat.shape[0]/2
+		M = int(frameMat.shape[0]/2)
 		X = np.matrix(np.zeros((M, frameMat.shape[1]), dtype=np.complex_))
 		for i in range(frameMat.shape[1]):
 			U = np.matrix(np.sqrt(1/(2*M)) * np.fft.fft(frameMat[:, i].T)).T
