@@ -80,15 +80,15 @@ class AudioWatermarkingMCLT():
 		cor = np.matrix(np.zeros((length, 1), dtype=np.complex_))
 		sync = awmOpt.syncSeq.reshape(-1, int((awmOpt.syncFreqBand[1]-awmOpt.syncFreqBand[0])/2+1)).T
 		syncFrameSize = int(np.size(sync) / ((awmOpt.syncFreqBand[1]-awmOpt.syncFreqBand[0])/2+1)*2)
-		i = np.arange(1, syncFrameSize, 2)
+		j = np.arange(1, syncFrameSize, 2)
 		k = np.arange(awmOpt.syncFreqBand[0], awmOpt.syncFreqBand[1]+1, 2)
 
-		fmcltk = np.array(range(0, M+1), dtype=np.float64)
-		fmcltc = AudioWatermarkingMCLT.compExpo(8, 2*fmcltk+1) * AudioWatermarkingMCLT.compExpo(4*M, fmcltk)
+		fmcltk = np.matrix(range(0, M+1), dtype=np.float64).reshape(-1, 1)
+		fmcltc = np.multiply(AudioWatermarkingMCLT.compExpo(8, 2*fmcltk+1), AudioWatermarkingMCLT.compExpo(4*M, fmcltk))
 		for i in range(base, base+length):
 			truncated = util.enframe(y[i:i+(syncFrameSize-1)*512+1024], awmOpt.frameSize, awmOpt.overlap)
 			embed = AudioWatermarkingMCLT.fmclt3(truncated, fmcltc)
-			cor[i-base, 0] = np.sum(np.divide(np.multiply(embed[k, j], sync), np.absolute(embed[k, j])))
+			cor[i-base, 0] = np.sum(np.divide(np.multiply(embed[np.ix_(k, j)], sync), np.absolute(embed[np.ix_(k, j)])))
 		return cor
 
 
@@ -208,11 +208,18 @@ class AudioWatermarkingMCLT():
 
 def main():
 	from awmOptSet import AwmOptSet as awmOptSet
+	import scipy.io
+	import time
 	#import util
 	fs, au = util.audioread('./testAudio/mono.wav')
 	awmOpt = awmOptSet('mclt')
-	haha = AudioWatermarkingMCLT.awmEmbed(au, awmOpt)
-	util.audiowrite('hhh.wav', haha, fs)
+	output = AudioWatermarkingMCLT.singleChannelEmbed(au, awmOpt)
+	startTime = time.time()
+	cor = AudioWatermarkingMCLT.findSyncFast(output, 0, 44100, awmOpt)
+	print('Elapsed time: %s\n', (time.time() - startTime))
+	scipy.io.savemat('cor.mat', {'cor': cor})
+	print(cor.shape)
+	print(cor.dtype)
 
 if __name__ == '__main__':
 	main()
