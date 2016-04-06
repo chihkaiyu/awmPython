@@ -73,7 +73,32 @@ class AudioWatermarkingMCLT():
 		return output
 
 	#def awmExtract(self):
-	
+
+	@staticmethod
+	def extractMCLT(y, index, awmOpt):
+		dataSeq = AudioWatermarkingMCLT.string2binary(awmOpt.data)
+		bitPerFrame = int((awmOpt.dataFreqBand[1]-awmOpt.dataFreqBand[0]+1) / awmOpt.spreadLen)
+		syncFrameSize = int(np.size(awmOpt.syncSeq) / ((awmOpt.syncFreqBand[1]-awmOpt.syncFreqBand[0])/2+1)*2)
+		dataFrameSize =  int(np.ceil(np.size(dataSeq)/bitPerFrame))
+		blockSize = syncFrameSize + dataFrameSize
+		tmp = util.enframe(y[index:index+(blockSize-1)*(awmOpt.frameSize-awmOpt.overlap)+awmOpt.frameSize], awmOpt.frameSize, awmOpt.overlap)
+		block = AudioWatermarkingMCLT.fmclt2(tmp)
+		cipher = np.matrix(np.zeros((1, bitPerFrame*dataFrameSize), dtype=np.int))
+		count = 0
+		rowIndex = np.arange(awmOpt.dataFreqBand[0], awmOpt.dataFreqBand[1]+1, awmOpt.spreadLen)
+		for i in range(syncFrameSize, block.shape[1]):
+			for j in range(bitPerFrame):
+				positive = len(np.nonzero(np.sign(block[rowIndex[j]:rowIndex[j]+awmOpt.spreadLen, i].real) == 1)[0])
+				negative = len(np.nonzero(np.sign(block[rowIndex[j]:rowIndex[j]+awmOpt.spreadLen, i].real) == -1)[0])
+				if positive >= negative:
+					cipher[0, count] = 1
+				else:
+					cipher[0, count] = -1
+				count = count + 1
+		if (dataSeq.shape[1] % bitPerFrame) != 0:
+			cipher = cipher[0, 0:dataSeq.shape[1]]
+		return cipher
+
 	@staticmethod
 	def findSyncFast(y, base, length, awmOpt):
 		M = int(awmOpt.frameSize/2)
@@ -90,9 +115,6 @@ class AudioWatermarkingMCLT():
 			embed = AudioWatermarkingMCLT.fmclt3(truncated, fmcltc)
 			cor[i-base, 0] = np.sum(np.divide(np.multiply(embed[np.ix_(k, j)], sync), np.absolute(embed[np.ix_(k, j)])))
 		return cor
-
-
-
 
 	@staticmethod
 	def compExpo(M, r):
@@ -215,11 +237,12 @@ def main():
 	awmOpt = awmOptSet('mclt')
 	output = AudioWatermarkingMCLT.singleChannelEmbed(au, awmOpt)
 	startTime = time.time()
-	cor = AudioWatermarkingMCLT.findSyncFast(output, 0, 44100, awmOpt)
+	cor = AudioWatermarkingMCLT.findSyncFast(output, 0, 100, awmOpt)
 	print('Elapsed time: %s\n', (time.time() - startTime))
-	scipy.io.savemat('cor.mat', {'cor': cor})
-	print(cor.shape)
-	print(cor.dtype)
+	pos = np.nonzero(cor.real > 100)
+	ci = AudioWatermarkingMCLT.extractMCLT(output, pos[0][0], awmOpt)
+	plain = AudioWatermarkingMCLT.cipher2plain(ci)
+	print(plain)
 
 if __name__ == '__main__':
 	main()
